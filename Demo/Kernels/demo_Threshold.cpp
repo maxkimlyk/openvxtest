@@ -62,7 +62,7 @@ void demo_Threshold::execute()
    cv::namedWindow(m_openCVWindow, CV_WINDOW_NORMAL);
    cv::namedWindow(m_diffWindow, CV_WINDOW_NORMAL);
 
-   const std::string imgPath = "..\\Image\\Solvay_conference_1927.png";
+   const std::string imgPath = "..\\Image\\testimg1_8UC1.png";
    m_srcImage = cv::imread(imgPath, CV_LOAD_IMAGE_GRAYSCALE);
    cv::imshow(m_originalWindow, m_srcImage);
 

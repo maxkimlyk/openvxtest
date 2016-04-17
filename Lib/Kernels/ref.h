@@ -50,6 +50,19 @@ vx_status ref_Threshold(const vx_image src_image, vx_image dst_image, const vx_t
 ///////////////////////////////////////////////////////////////////////////////
 
 /*
+	Function: ref_DisparityMap
+	
+	TODO: описание
+
+	Parameters:
+		
+	Return:
+		VX_SUCCESS          - в случае успешного завершения;
+		VX_ERROR_INVALID_PARAMETERS - в случае некорректных данных.
+*/
+vx_status ref_DisparityMap(const vx_image src_image, vx_image dst_image);
+
+/*
     Function: ref_ConnectedComponentsLabeling
 
     Описание фукнции
