@@ -23,8 +23,6 @@ vx_status ref_DisparityMap(const vx_image left_image, const vx_image right_image
 	const uint32_t width = left_image->width;
 	const uint32_t height = left_image->height;
 
-	const uint32_t max_disparity = 255;
-
 	for (uint32_t y = 0; y < height - block_size; y += block_size)
 	{
 		for (uint32_t x = 0; x < width - block_size; x += block_size)
@@ -38,13 +36,16 @@ vx_status ref_DisparityMap(const vx_image left_image, const vx_image right_image
 
 			disparity = CalcDisparity(left_image, right_image, left_block, distance_threshold);
 
-			if (disparity > max_disparity)
+			// TODO: переместить подгонку цвета в демо
+			const uint8_t max_color = 255;
+			const uint8_t min_color = 10;
+			uint8_t color = (uint8_t)(disparity / (float)distance_threshold * max_color);
+
+			if (color < min_color)
 			{
-				disparity = max_disparity;
+				color = min_color;
 			}
 
-			// TODO: переместить подгонку цвета в демо
-			uint8_t color = (uint8_t)(disparity / (float)distance_threshold * max_disparity);
 			FillBlock(disparity_image, left_block, color);
 		}
 	}

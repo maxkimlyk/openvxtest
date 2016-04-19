@@ -118,8 +118,10 @@ void demo_DisparityMap::applyParameters(int, void* pointer)
 
 	ref_DisparityMap(&leftVXImage, &rightVXImage, &disparityVXImage, pThis->m_blockSize, pThis->m_disparityThrashold);
 
-	const cv::Mat vxImage = cv::Mat(size, CV_8UC1, disparityImageData);
-	cv::imshow("Disparity Map", vxImage);
+	const cv::Mat resultImage = cv::Mat(size, CV_8UC1, disparityImageData);
+	cv::Mat       coloredImage;
+	cv::applyColorMap(resultImage, coloredImage, cv::ColormapTypes::COLORMAP_JET);
+	cv::imshow("Disparity Map", coloredImage);
 
 	free(disparityImageData);
 
