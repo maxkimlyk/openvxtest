@@ -95,7 +95,7 @@ void demo_DisparityMap::execute()
 		VX_COLOR_SPACE_DEFAULT
 	};
 
-	ref_DisparityMap(&leftVXImage, &rightVXImage, &disparityVXImage);
+	ref_DisparityMap(&leftVXImage, &rightVXImage, &disparityVXImage, 5, 50);
 
 	const cv::Mat vxImage = cv::Mat(leftSize, CV_8UC1, disparityImageData);
 	cv::imshow("Disparity Map", vxImage);
