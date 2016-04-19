@@ -62,7 +62,7 @@
     <ClCompile Include="Kernels\ref\ref_Threshold.c">
       <Filter>Source Files\Kernels</Filter>
     </ClCompile>
-    <ClCompile Include="Kernels\ref\ref_Disparity.c">
+    <ClCompile Include="Kernels\ref\ref_DisparityMap.c">
       <Filter>Source Files\Kernels</Filter>
     </ClCompile>
   </ItemGroup>

@@ -38,64 +38,78 @@ private:
 	static void applyParameters(int pos, void* data);
 
 private:
-	cv::Mat m_srcImage;
+	cv::Mat m_leftImage;
+	cv::Mat m_rightImage;
+	//cv::Mat m_disparityImage;
 };
 
-///////////////////////////////////////////////////////////////////////////////
-namespace
-{
-	const std::string m_SrcWindow = "src";
-	const std::string m_DestWindow = "dest";
-	//const std::string m_diffWindow = m_openVXWindow + "-" + m_openCVWindow;
-}
+// TODO: убрать это
+#pragma warning(disable : 4189) // unused variable 
 
 ///////////////////////////////////////////////////////////////////////////////
 void demo_DisparityMap::execute()
 {
-	cv::namedWindow(m_SrcWindow, CV_WINDOW_NORMAL);
-	cv::namedWindow(m_DestWindow, CV_WINDOW_NORMAL);
+	cv::namedWindow("Left", CV_WINDOW_NORMAL);
+	cv::namedWindow("Right", CV_WINDOW_NORMAL);
+	cv::namedWindow("Disparity Map", CV_WINDOW_NORMAL);
 	
-	const std::string imgPath = "..\\Image\\testimg1_8UC1.png";
-	m_srcImage = cv::imread(imgPath, CV_LOAD_IMAGE_GRAYSCALE);
-	cv::imshow(m_SrcWindow, m_srcImage);
+	const std::string leftImgPath = "..\\Image\\disparity\\01left.png";
+	const std::string rightImgPath = "..\\Image\\disparity\\01right.png";
+	m_leftImage = cv::imread(leftImgPath, CV_LOAD_IMAGE_GRAYSCALE);
+	m_rightImage = cv::imread(rightImgPath, CV_LOAD_IMAGE_GRAYSCALE);
+	cv::imshow("Left", m_leftImage);
+	cv::imshow("Right", m_rightImage);
 
-	const cv::Size imgSize(m_srcImage.cols, m_srcImage.rows);
+	const cv::Size leftSize(m_leftImage.cols, m_rightImage.rows);
+	const cv::Size rightSize(m_rightImage.cols, m_rightImage.rows);
+
+	if (leftSize != rightSize)
+	{
+		std::cout << "ERROR: Left image size is not equal to right image size." << std::endl;
+		return;
+	}
 
 	///@{ OPENVX
-	//_vx_threshold vxThresh = { VX_THRESHOLD_TYPE_BINARY, uint8_t(demo->m_threshold), 0/* dummy value */, 255 /* dummy value */ };
-	_vx_image srcVXImage = {
-		m_srcImage.data,
-		imgSize.width,
-		imgSize.height,
+	_vx_image leftVXImage = {
+		m_leftImage.data,
+		leftSize.width,
+		leftSize.height,
 		VX_DF_IMAGE_U8,
 		VX_COLOR_SPACE_DEFAULT
 	};
 
-	uint8_t* outVXImage = static_cast<uint8_t*>(calloc(imgSize.width* imgSize.height, sizeof(uint8_t)));
-	_vx_image dstVXImage = {
-		outVXImage,
-		imgSize.width,
-		imgSize.height,
+	_vx_image rightVXImage = {
+		m_rightImage.data,
+		rightSize.width,
+		rightSize.height,
 		VX_DF_IMAGE_U8,
 		VX_COLOR_SPACE_DEFAULT
 	};
 
-	ref_DisparityMap(&srcVXImage, &dstVXImage);
+	uint8_t* disparityImageData = static_cast<uint8_t*>(calloc(leftSize.width * leftSize.height, sizeof(uint8_t)));
+	_vx_image disparityVXImage = {
+		disparityImageData,
+		leftSize.width,
+		leftSize.height,
+		VX_DF_IMAGE_U8,
+		VX_COLOR_SPACE_DEFAULT
+	};
 
-	const cv::Mat vxImage = cv::Mat(imgSize, CV_8UC1, outVXImage);
-	cv::imshow(m_DestWindow, vxImage);
+	ref_DisparityMap(&leftVXImage, &rightVXImage, &disparityVXImage);
+
+	const cv::Mat vxImage = cv::Mat(leftSize, CV_8UC1, disparityImageData);
+	cv::imshow("Disparity Map", vxImage);
 
 	///@}
 
-	//applyParameters(0, this);
-
 	cv::waitKey(0);
+	free(disparityImageData);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 void demo_DisparityMap::applyParameters(int, void*)
 {
-	//auto demo = static_cast<demo_DisparityMap*>(data);
+	// TODO: код из execute() сюда
 
 	// Show difference of OpenVX and OpenCV
 	//const cv::Mat diffImage(imgSize, CV_8UC1);
