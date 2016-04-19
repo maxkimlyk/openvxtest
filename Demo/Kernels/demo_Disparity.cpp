@@ -22,6 +22,8 @@ public:
 	///@brief defaut constructor
 	demo_DisparityMap()
 	{
+		m_blockSize = 5;
+		m_disparityThrashold = 50;
 	}
 
 	///@see IDemoCase::ReplyName
@@ -40,25 +42,28 @@ private:
 private:
 	cv::Mat m_leftImage;
 	cv::Mat m_rightImage;
+	cv::Mat m_sourceImage;
 	//cv::Mat m_disparityImage;
-};
 
-// TODO: убрать это
-#pragma warning(disable : 4189) // unused variable 
+	int m_blockSize;
+	int m_disparityThrashold;
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 void demo_DisparityMap::execute()
 {
-	cv::namedWindow("Left", CV_WINDOW_NORMAL);
-	cv::namedWindow("Right", CV_WINDOW_NORMAL);
+	cv::namedWindow("Source Image", CV_WINDOW_NORMAL);
 	cv::namedWindow("Disparity Map", CV_WINDOW_NORMAL);
+	cv::namedWindow("Controls", CV_WINDOW_AUTOSIZE | CV_GUI_NORMAL);
 	
+	cv::createTrackbar("BlockSize", "Controls", &m_blockSize, 20, applyParameters, this);
+	cv::createTrackbar("DisparityThrashold", "Controls", &m_disparityThrashold, 120, applyParameters, this);
+
 	const std::string leftImgPath = "..\\Image\\disparity\\01left.png";
 	const std::string rightImgPath = "..\\Image\\disparity\\01right.png";
 	m_leftImage = cv::imread(leftImgPath, CV_LOAD_IMAGE_GRAYSCALE);
 	m_rightImage = cv::imread(rightImgPath, CV_LOAD_IMAGE_GRAYSCALE);
-	cv::imshow("Left", m_leftImage);
-	cv::imshow("Right", m_rightImage);
+	m_sourceImage = cv::imread(leftImgPath, CV_LOAD_IMAGE_GRAYSCALE);
 
 	const cv::Size leftSize(m_leftImage.cols, m_rightImage.rows);
 	const cv::Size rightSize(m_rightImage.cols, m_rightImage.rows);
@@ -69,52 +74,56 @@ void demo_DisparityMap::execute()
 		return;
 	}
 
+	cv::imshow("Source Image", m_sourceImage);
+
+	//cv::createTrackbar("BlockSize", "Controls", &m_blockSize, 20, applyParameters, this);
+	//cv::createButton("test", applyParameters, this, CV_CHECKBOX, 1);
+
+	applyParameters(0, this);
+	cv::waitKey(0);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void demo_DisparityMap::applyParameters(int, void* pointer)
+{
+	demo_DisparityMap *pThis = (demo_DisparityMap*)(pointer);
+
+	const cv::Size size(pThis->m_leftImage.cols, pThis->m_rightImage.rows);
+
 	///@{ OPENVX
 	_vx_image leftVXImage = {
-		m_leftImage.data,
-		leftSize.width,
-		leftSize.height,
+		pThis->m_leftImage.data,
+		size.width,
+		size.height,
 		VX_DF_IMAGE_U8,
 		VX_COLOR_SPACE_DEFAULT
 	};
 
 	_vx_image rightVXImage = {
-		m_rightImage.data,
-		rightSize.width,
-		rightSize.height,
+		pThis->m_rightImage.data,
+		size.width,
+		size.height,
 		VX_DF_IMAGE_U8,
 		VX_COLOR_SPACE_DEFAULT
 	};
 
-	uint8_t* disparityImageData = static_cast<uint8_t*>(calloc(leftSize.width * leftSize.height, sizeof(uint8_t)));
+	uint8_t* disparityImageData = static_cast<uint8_t*>(calloc(size.width * size.height, sizeof(uint8_t)));
 	_vx_image disparityVXImage = {
 		disparityImageData,
-		leftSize.width,
-		leftSize.height,
+		size.width,
+		size.height,
 		VX_DF_IMAGE_U8,
 		VX_COLOR_SPACE_DEFAULT
 	};
 
-	ref_DisparityMap(&leftVXImage, &rightVXImage, &disparityVXImage, 5, 50);
+	ref_DisparityMap(&leftVXImage, &rightVXImage, &disparityVXImage, pThis->m_blockSize, pThis->m_disparityThrashold);
 
-	const cv::Mat vxImage = cv::Mat(leftSize, CV_8UC1, disparityImageData);
+	const cv::Mat vxImage = cv::Mat(size, CV_8UC1, disparityImageData);
 	cv::imshow("Disparity Map", vxImage);
 
-	///@}
-
-	cv::waitKey(0);
 	free(disparityImageData);
-}
 
-///////////////////////////////////////////////////////////////////////////////
-void demo_DisparityMap::applyParameters(int, void*)
-{
-	// TODO: код из execute() сюда
-
-	// Show difference of OpenVX and OpenCV
-	//const cv::Mat diffImage(imgSize, CV_8UC1);
-	//cv::absdiff(vxImage, cvImage, diffImage);
-	//cv::imshow(m_diffWindow, diffImage);
+	///@}
 }
 
 ///////////////////////////////////////////////////////////////////////////////

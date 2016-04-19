@@ -25,17 +25,16 @@ vx_status ref_DisparityMap(const vx_image left_image, const vx_image right_image
 
 	const uint32_t max_disparity = 255;
 
-	const uint8_t* left_data = left_image->data;
-	const uint8_t* right_data = right_image->data;
-
-	// TODO: размер блока не €вл€етс€ делителем размеров изображени€
-
 	for (uint32_t y = 0; y < height - block_size; y += block_size)
 	{
 		for (uint32_t x = 0; x < width - block_size; x += block_size)
 		{
 			uint32_t       disparity;
-			vx_rectangle_t left_block = { x, y, x + block_size, y + block_size };
+			vx_rectangle_t left_block;
+			left_block.start_x = x;
+			left_block.start_y = y;
+			left_block.end_x   = x + block_size;
+			left_block.end_y   = y + block_size;
 
 			disparity = CalcDisparity(left_image, right_image, left_block, distance_threshold);
 
@@ -44,7 +43,8 @@ vx_status ref_DisparityMap(const vx_image left_image, const vx_image right_image
 				disparity = max_disparity;
 			}
 
-			uint8_t color = disparity / (float)distance_threshold * max_disparity;
+			// TODO: переместить подгонку цвета в демо
+			uint8_t color = (uint8_t)(disparity / (float)distance_threshold * max_disparity);
 			FillBlock(disparity_image, left_block, color);
 		}
 	}
@@ -89,7 +89,7 @@ uint32_t CalcDisparity(vx_image left_image, vx_image right_image, vx_rectangle_t
 {
 	uint32_t block_size = left_block.end_x - left_block.start_x;
 	uint32_t min_difference = UINT_MAX;
-	uint32_t min_difference_start_x;
+	uint32_t min_difference_start_x = 0;
 
 	for (uint32_t offset = 0; offset <= max_distance; offset++)
 	{
@@ -98,7 +98,13 @@ uint32_t CalcDisparity(vx_image left_image, vx_image right_image, vx_rectangle_t
 		if (x < 0)
 			break;
 
-		vx_rectangle_t right_block = { (uint32_t)x, left_block.start_y, x + block_size, left_block.end_y };
+		vx_rectangle_t right_block;
+		right_block.start_x = (uint32_t)x;
+		right_block.start_y = left_block.start_y;
+		right_block.end_x   = x + block_size;
+		right_block.end_y   = left_block.end_y;
+
+
 		uint32_t       difference = SummaryAbsoluteDifference(left_image, right_image, left_block, right_block);
 		if (difference < min_difference)
 		{
