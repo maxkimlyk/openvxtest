@@ -6,13 +6,17 @@
 #include "../ref.h"
 #include <memory.h>
 
+// TODO: remove this
+#include <stdio.h>
+
 uint8_t*  At(vx_image image, uint32_t x, uint32_t y);
 bool      CheckImageSizes(const vx_image left, const vx_image right, const vx_image disparity);
 uint32_t  SummaryAbsoluteDifference(vx_image source_image, vx_image matching_image, vx_rectangle_t source_block, vx_rectangle_t matching_block);
 uint32_t  CalcDisparity(vx_image left_image, vx_image right_image, vx_rectangle_t left_block, uint32_t max_distance);
 void      FillBlock(vx_image image, vx_rectangle_t rect, uint8_t value);
 
-vx_status ref_DisparityMap(const vx_image left_image, const vx_image right_image, vx_image disparity_image,
+vx_status ref_DisparityMap(
+	const vx_image left_image, const vx_image right_image, vx_image disparity_image,
 	uint32_t block_size, uint32_t distance_threshold)
 {
 	if (!CheckImageSizes(left_image, right_image, disparity_image))
@@ -23,16 +27,21 @@ vx_status ref_DisparityMap(const vx_image left_image, const vx_image right_image
 	const uint32_t width = left_image->width;
 	const uint32_t height = left_image->height;
 
-	for (uint32_t y = 0; y < height - block_size; y += block_size)
+	uint32_t block_halfsize = block_size / 2;
+
+	// TODO: diparity for each pixel
+
+	for (uint32_t y = block_halfsize; y < height - block_halfsize; y++)
 	{
-		for (uint32_t x = 0; x < width - block_size; x += block_size)
+		for (uint32_t x = block_halfsize; x < width - block_halfsize; x++)
 		{
 			uint32_t       disparity;
 			vx_rectangle_t left_block;
-			left_block.start_x = x;
-			left_block.start_y = y;
-			left_block.end_x   = x + block_size;
-			left_block.end_y   = y + block_size;
+
+			left_block.start_x = x - block_halfsize;
+			left_block.start_y = y - block_halfsize;
+			left_block.end_x   = x + block_halfsize;
+			left_block.end_y   = y + block_halfsize;
 
 			disparity = CalcDisparity(left_image, right_image, left_block, distance_threshold);
 
@@ -46,7 +55,16 @@ vx_status ref_DisparityMap(const vx_image left_image, const vx_image right_image
 				color = min_color;
 			}
 
-			FillBlock(disparity_image, left_block, color);
+			//FillBlock(disparity_image, left_block, color);
+			*At(disparity_image, x, y) = color;
+		}
+
+
+		// TODO: remove this
+		if ((y - block_halfsize) % 10 == 0)
+		{
+			uint32_t working_size = height - 2 * block_halfsize;
+			printf("row #%d (%2.f%%)\n", y, 100.0f * (float)(y - block_halfsize) / working_size);
 		}
 	}
 

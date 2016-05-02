@@ -6,6 +6,7 @@
 #include "../stdafx.h"
 #include <opencv2/opencv.hpp>
 
+
 extern "C"
 {
 #include "Lib/Kernels/ref.h"

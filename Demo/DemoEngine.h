@@ -41,8 +41,6 @@ typedef std::unique_ptr<IDemoCase> IDemoCasePtr;
 //IDemoCasePtr CreateThresholdingDemo();
 IDemoCasePtr CreateDisparityMapDemo();
 
-/// TODO: add your demos here
-
 ///////////////////////////////////////////////////////////////////////////////
 
 ///@class Provide showing demo
