@@ -14,6 +14,7 @@ bool      CheckImageSizes(const vx_image left, const vx_image right, const vx_im
 uint32_t  SummaryAbsoluteDifference(vx_image source_image, vx_image matching_image, vx_rectangle_t source_block, vx_rectangle_t matching_block);
 uint32_t  CalcDisparity(vx_image left_image, vx_image right_image, vx_rectangle_t left_block, uint32_t max_distance);
 void      FillBlock(vx_image image, vx_rectangle_t rect, uint8_t value);
+uint32_t  SubPixelEstimation(vx_image left, vx_image right, vx_rectangle_t source_block, vx_rectangle_t min_block);
 
 vx_status ref_DisparityMap(
 	const vx_image left_image, const vx_image right_image, vx_image disparity_image,
@@ -33,7 +34,7 @@ vx_status ref_DisparityMap(
 
 	for (uint32_t y = block_halfsize; y < height - block_halfsize; y++)
 	{
-		for (uint32_t x = block_halfsize; x < width - block_halfsize; x++)
+		for (uint32_t x = distance_threshold; x < width - block_halfsize; x++)
 		{
 			uint32_t       disparity;
 			vx_rectangle_t left_block;
@@ -55,10 +56,8 @@ vx_status ref_DisparityMap(
 				color = min_color;
 			}
 
-			//FillBlock(disparity_image, left_block, color);
 			*At(disparity_image, x, y) = color;
 		}
-
 
 		// TODO: remove this
 		if ((y - block_halfsize) % 10 == 0)
@@ -98,6 +97,7 @@ uint32_t SummaryAbsoluteDifference(vx_image source_image, vx_image matching_imag
 		{
 			uint8_t source_pixel = *At(source_image, source_block.start_x + x, source_block.end_y + y);
 			uint8_t matching_pixel = *At(matching_image, matching_block.start_x + x, matching_block.end_y + y);
+
 			sum += (uint32_t) abs(source_pixel - matching_pixel);
 		}
 
@@ -107,6 +107,7 @@ uint32_t SummaryAbsoluteDifference(vx_image source_image, vx_image matching_imag
 uint32_t CalcDisparity(vx_image left_image, vx_image right_image, vx_rectangle_t left_block, uint32_t max_distance)
 {
 	uint32_t block_size = left_block.end_x - left_block.start_x;
+
 	uint32_t min_difference = UINT_MAX;
 	uint32_t min_difference_start_x = 0;
 
@@ -123,8 +124,7 @@ uint32_t CalcDisparity(vx_image left_image, vx_image right_image, vx_rectangle_t
 		right_block.end_x   = x + block_size;
 		right_block.end_y   = left_block.end_y;
 
-
-		uint32_t       difference = SummaryAbsoluteDifference(left_image, right_image, left_block, right_block);
+		uint32_t difference = SummaryAbsoluteDifference(left_image, right_image, left_block, right_block);
 		if (difference < min_difference)
 		{
 			min_difference = difference;
@@ -132,7 +132,57 @@ uint32_t CalcDisparity(vx_image left_image, vx_image right_image, vx_rectangle_t
 		}
 	}
 
-	return (uint32_t) abs(left_block.start_x - min_difference_start_x);
+	vx_rectangle_t min_block;
+	min_block.start_x = min_difference_start_x;
+	min_block.start_y = left_block.start_y;
+	min_block.end_x   = min_difference_start_x + block_size - 1;
+	min_block.end_y   = left_block.end_y;
+
+	//return (uint32_t) abs(left_block.start_x - min_difference_start_x);
+	return SubPixelEstimation(left_image, right_image, left_block, min_block);
+}
+
+// TODO: it works still bad. solve the problem
+uint32_t SubPixelEstimation(vx_image left_image, vx_image right_image, vx_rectangle_t template_block, vx_rectangle_t matched_block)
+{
+	uint32_t disparity = abs(template_block.start_x - matched_block.start_x);
+
+	// if no neighbour blocks
+	if (matched_block.start_x <= 0 || matched_block.end_x >= right_image->width - 1)
+	{
+		return disparity;
+	}
+
+	// TODO: refactor this
+
+	matched_block.start_x --;
+	matched_block.end_x --;
+
+	int c1 = SummaryAbsoluteDifference(left_image, right_image, template_block, matched_block);
+	
+	matched_block.start_x ++;
+	matched_block.end_x ++;
+
+	int c2 = SummaryAbsoluteDifference(left_image, right_image, template_block, matched_block);
+
+	matched_block.start_x ++;
+	matched_block.end_x ++;
+
+	int c3 = SummaryAbsoluteDifference(left_image, right_image, template_block, matched_block);
+
+	// TODO: check the formula
+	int denum = (c3 - 2*c2 + c1);
+
+	if (denum == 0)
+	{
+		return disparity;
+	}
+
+	int num = c3 - c1;
+	float correction = - (float)(num) / (float)(denum) * 0.5f;
+	int   result = (int)(disparity + correction);
+
+	return (uint32_t) (result);
 }
 
 void FillBlock(vx_image image, vx_rectangle_t rect, uint8_t value)

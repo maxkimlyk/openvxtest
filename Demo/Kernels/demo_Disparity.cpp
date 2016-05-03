@@ -23,8 +23,8 @@ public:
 	///@brief defaut constructor
 	demo_DisparityMap()
 	{
-		m_blockSize = 5;
-		m_disparityThrashold = 50;
+		m_blockSize = 9;
+		m_disparityThreshold = 50;
 	}
 
 	///@see IDemoCase::ReplyName
@@ -47,7 +47,7 @@ private:
 	//cv::Mat m_disparityImage;
 
 	int m_blockSize;
-	int m_disparityThrashold;
+	int m_disparityThreshold;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -58,7 +58,7 @@ void demo_DisparityMap::execute()
 	cv::namedWindow("Controls", CV_WINDOW_AUTOSIZE | CV_GUI_NORMAL);
 	
 	cv::createTrackbar("BlockSize", "Controls", &m_blockSize, 20, applyParameters, this);
-	cv::createTrackbar("DisparityThrashold", "Controls", &m_disparityThrashold, 120, applyParameters, this);
+	cv::createTrackbar("DisparityThreshold", "Controls", &m_disparityThreshold, 120, applyParameters, this);
 
 	const std::string leftImgPath = "..\\Image\\disparity\\01left.png";
 	const std::string rightImgPath = "..\\Image\\disparity\\01right.png";
@@ -117,7 +117,7 @@ void demo_DisparityMap::applyParameters(int, void* pointer)
 		VX_COLOR_SPACE_DEFAULT
 	};
 
-	ref_DisparityMap(&leftVXImage, &rightVXImage, &disparityVXImage, pThis->m_blockSize, pThis->m_disparityThrashold);
+	ref_DisparityMap(&leftVXImage, &rightVXImage, &disparityVXImage, pThis->m_blockSize, pThis->m_disparityThreshold);
 
 	const cv::Mat resultImage = cv::Mat(size, CV_8UC1, disparityImageData);
 	cv::Mat       coloredImage;
