@@ -74,7 +74,7 @@ vx_status ref_DisparityMap(
 	const vx_image right_image,
 	vx_image disparity_image,
 	const uint32_t block_size,
-	const uint32_t max_disparity,
+	const int16_t max_disparity,
 	const bool search_right);
 
 /*

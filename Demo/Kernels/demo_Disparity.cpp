@@ -43,7 +43,6 @@ private:
 	cv::Mat m_leftImage;
 	cv::Mat m_rightImage;
 	cv::Mat m_sourceImage;
-	//cv::Mat m_disparityImage;
 
 	int m_blockSize;
 	int m_disparityThreshold;
@@ -61,14 +60,12 @@ namespace
 ///////////////////////////////////////////////////////////////////////////////
 void demo_DisparityMap::execute()
 {
-	// TODO: refactoring
-
 	cv::namedWindow(SourceImageWindowName, CV_WINDOW_NORMAL);
 	cv::namedWindow(DisparityMapWindowName, CV_WINDOW_NORMAL);
 	cv::namedWindow(ControlsWindowName, CV_WINDOW_AUTOSIZE | CV_GUI_NORMAL);
 	
-	cv::createTrackbar("BlockSize", ControlsWindowName, &m_blockSize, 20, applyParameters, this);
-	cv::createTrackbar("DisparityThreshold", ControlsWindowName, &m_disparityThreshold, 120, applyParameters, this);
+	cv::createTrackbar("Block Size", ControlsWindowName, &m_blockSize, 20, applyParameters, this);
+	cv::createTrackbar("Max Disp", ControlsWindowName, &m_disparityThreshold, 120, applyParameters, this);
 
 	const std::string leftImgPath = "..\\Image\\disparity\\01left.png";
 	const std::string rightImgPath = "..\\Image\\disparity\\01right.png";
@@ -115,29 +112,29 @@ void demo_DisparityMap::applyParameters(int, void* pointer)
 		VX_COLOR_SPACE_DEFAULT
 	};
 
-	uint8_t* disparityImageData = static_cast<uint8_t*>(calloc(size.width * size.height, sizeof(uint8_t)));
+	int16_t* disparityImageData = (int16_t*)(calloc(size.width * size.height, sizeof(int16_t)));
 	_vx_image disparityVXImage = {
 		disparityImageData,
 		size.width,
 		size.height,
-		VX_DF_IMAGE_U8,
+		VX_DF_IMAGE_S16,
 		VX_COLOR_SPACE_DEFAULT
 	};
 
-	ref_DisparityMap(&leftVXImage, &rightVXImage, &disparityVXImage, pThis->m_blockSize, pThis->m_disparityThreshold, true);
+	ref_DisparityMap(&leftVXImage, &rightVXImage, &disparityVXImage, pThis->m_blockSize, (int16_t)pThis->m_disparityThreshold, true);
 
-	const cv::Mat disparityMap = cv::Mat(size, CV_8UC1, disparityImageData);
-	cv::Mat       coloredDisparityMap;
+	const cv::Mat disparityMap16Bits = cv::Mat(size, CV_16SC1, disparityImageData);
+	cv::Mat       disparityMap8Bits;
 
 	double minVal, maxVal;
-	minMaxLoc(disparityMap, &minVal, &maxVal);
+	minMaxLoc(disparityMap16Bits, &minVal, &maxVal);
 	
 	if (maxVal - minVal != 0)
 	{
-		disparityMap.convertTo(coloredDisparityMap, CV_8UC1, 255 / (maxVal - minVal));
-		cv::applyColorMap(coloredDisparityMap, coloredDisparityMap, cv::ColormapTypes::COLORMAP_JET);
+		disparityMap16Bits.convertTo(disparityMap8Bits, CV_8UC1, 255 / (maxVal - minVal));
+		cv::applyColorMap(disparityMap8Bits, disparityMap8Bits, cv::ColormapTypes::COLORMAP_JET);
 
-		cv::imshow(DisparityMapWindowName, coloredDisparityMap);
+		cv::imshow(DisparityMapWindowName, disparityMap8Bits);
 	}
 	
 	free(disparityImageData);
