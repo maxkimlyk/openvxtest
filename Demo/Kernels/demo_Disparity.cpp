@@ -6,7 +6,6 @@
 #include "../stdafx.h"
 #include <opencv2/opencv.hpp>
 
-
 extern "C"
 {
 #include "Lib/Kernels/ref.h"
@@ -23,7 +22,7 @@ public:
 	///@brief defaut constructor
 	demo_DisparityMap()
 	{
-		m_blockSize = 9;
+		m_blockSize = 5;
 		m_disparityThreshold = 50;
 	}
 
@@ -53,6 +52,8 @@ private:
 ///////////////////////////////////////////////////////////////////////////////
 void demo_DisparityMap::execute()
 {
+	// TODO: refactoring
+
 	cv::namedWindow("Source Image", CV_WINDOW_NORMAL);
 	cv::namedWindow("Disparity Map", CV_WINDOW_NORMAL);
 	cv::namedWindow("Controls", CV_WINDOW_AUTOSIZE | CV_GUI_NORMAL);
@@ -76,9 +77,6 @@ void demo_DisparityMap::execute()
 	}
 
 	cv::imshow("Source Image", m_sourceImage);
-
-	//cv::createTrackbar("BlockSize", "Controls", &m_blockSize, 20, applyParameters, this);
-	//cv::createButton("test", applyParameters, this, CV_CHECKBOX, 1);
 
 	applyParameters(0, this);
 	cv::waitKey(0);
@@ -117,11 +115,17 @@ void demo_DisparityMap::applyParameters(int, void* pointer)
 		VX_COLOR_SPACE_DEFAULT
 	};
 
-	ref_DisparityMap(&leftVXImage, &rightVXImage, &disparityVXImage, pThis->m_blockSize, pThis->m_disparityThreshold);
+	ref_DisparityMap(&leftVXImage, &rightVXImage, &disparityVXImage, pThis->m_blockSize, pThis->m_disparityThreshold, false);
 
 	const cv::Mat resultImage = cv::Mat(size, CV_8UC1, disparityImageData);
-	cv::Mat       coloredImage;
-	cv::applyColorMap(resultImage, coloredImage, cv::ColormapTypes::COLORMAP_JET);
+	cv::Mat  coloredImage;
+
+	double minVal, maxVal;
+	minMaxLoc(resultImage, &minVal, &maxVal);
+		
+	resultImage.convertTo(coloredImage, CV_8UC1, 255/(maxVal - minVal));
+	cv::applyColorMap(coloredImage, coloredImage, cv::ColormapTypes::COLORMAP_JET);
+
 	cv::imshow("Disparity Map", coloredImage);
 
 	free(disparityImageData);

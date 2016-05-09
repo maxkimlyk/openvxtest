@@ -64,9 +64,9 @@ vx_status ref_DisparityMap(
 	const vx_image left_image,
 	const vx_image right_image,
 	vx_image disparity_image,
-	uint32_t block_size,
-	uint32_t distance_threshold
-	);
+	const uint32_t block_size,
+	const uint32_t max_disparity,
+	const bool search_right);
 
 /*
     Function: ref_ConnectedComponentsLabeling
