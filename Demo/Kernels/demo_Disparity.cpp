@@ -22,7 +22,7 @@ public:
 	///@brief defaut constructor
 	demo_DisparityMap()
 	{
-		m_blockSize = 5;
+		m_blockSize = 7;
 		m_disparityThreshold = 50;
 	}
 
@@ -115,7 +115,7 @@ void demo_DisparityMap::applyParameters(int, void* pointer)
 		VX_COLOR_SPACE_DEFAULT
 	};
 
-	ref_DisparityMap(&leftVXImage, &rightVXImage, &disparityVXImage, pThis->m_blockSize, pThis->m_disparityThreshold, false);
+	ref_DisparityMap(&leftVXImage, &rightVXImage, &disparityVXImage, pThis->m_blockSize, pThis->m_disparityThreshold, true);
 
 	const cv::Mat resultImage = cv::Mat(size, CV_8UC1, disparityImageData);
 	cv::Mat  coloredImage;

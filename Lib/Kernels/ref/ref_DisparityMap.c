@@ -7,15 +7,27 @@
 #include <memory.h>
 
 // TODO: remove this
+#ifdef _DEBUG
 #include <stdio.h>
+#endif
 
+// Function prototypes
 uint8_t GetPixel(const vx_image image, uint32_t x, uint32_t y);
-void SetPixel(vx_image image, uint32_t x, uint32_t y, uint8_t value);
+void    SetPixel(vx_image image, uint32_t x, uint32_t y, uint8_t value);
+
 bool CheckImageSizes(const vx_image left_img, const vx_image right_img, const vx_image disp_img);
-int FindDisparity(const vx_image source_img, const vx_image match_img, const vx_coordinates2d_t *pixel, const uint32_t block_halfsize, const uint32_t max_disparity, const bool search_right);
-uint32_t SummaryAbsoluteDifference(const vx_image source_img, const vx_image match_img, const vx_rectangle_t *template_block, vx_coordinates2d_t *match_block);
-void FillBlock(vx_image image, const vx_rectangle_t *block, uint8_t color);
-int SubPixelEstimation(int disp, int c1, int c2, int c3);
+
+int  FindDisparity(
+	const vx_image source_img, const vx_image match_img, 
+	const vx_coordinates2d_t *pixel, const uint32_t block_halfsize, 
+	const uint32_t max_disparity, const bool search_right);
+
+uint32_t SummaryAbsoluteDifference(
+	const vx_image source_img, const vx_image match_img, 
+	const vx_rectangle_t *template_block, vx_coordinates2d_t *match_block);
+
+int  SubPixelEstimation(int disparity, int prev_cost, int current_cost, int next_cost);
+///////////////////////////////////////////////////////////////////////////////
 
 vx_status ref_DisparityMap(
 	const vx_image left_img, const vx_image right_img, vx_image disp_img,
@@ -33,28 +45,29 @@ vx_status ref_DisparityMap(
 	const vx_image template_img = search_right ? right_img : left_img;
 	const vx_image match_img = search_right ? left_img : right_img;
 
-	for (uint32_t y = block_halfsize; y < height - block_halfsize; y++)
-	{
-		for (uint32_t x = block_halfsize; x < width - block_halfsize; x++)
-		{
-			vx_coordinates2d_t pixel;
-			pixel.x = x;
-			pixel.y = y;
+	vx_coordinates2d_t pixel;
 
+	for (pixel.y = block_halfsize; pixel.y < height - block_halfsize; pixel.y++)
+	{
+		for (pixel.x = block_halfsize; pixel.x < width - block_halfsize; pixel.x++)
+		{
 			int disparity = FindDisparity(template_img, match_img, &pixel, block_halfsize, max_disparity, search_right);
+#ifdef _DEBUG
 			if (disparity < 0 || disparity > UINT8_MAX)
 			{
-				printf("Warning. Disparity out of UINT8 range! (x=%d, y=%d)\n", x, y);
+				printf("Warning. Disparity out of UINT8 range! (x=%d, y=%d)\n", pixel.x, pixel.y);
 			}
-			
-			SetPixel(disp_img, x, y, (uint8_t)(disparity));
+#endif	
+			SetPixel(disp_img, pixel.x, pixel.y, (uint8_t)(disparity));
 		}
 
-		if ((y - block_halfsize) % 10 == 0)
+#ifdef _DEBUG
+		if ((pixel.y - block_halfsize) % 10 == 0)
 		{
 			uint32_t rows = height - 2 * block_halfsize;
-			printf("Row %d / %d\n", (y - block_halfsize), rows);
+			printf("Row %d / %d\n", (pixel.y - block_halfsize), rows);
 		}
+#endif
 	}
 
 	return VX_SUCCESS;
@@ -78,7 +91,10 @@ bool CheckImageSizes(const vx_image left_img, const vx_image right_img, const vx
 		left_img->height == right_img->height && left_img->height == disp_img->height);
 }
 
-int FindDisparity(const vx_image source_img, const vx_image match_img, const vx_coordinates2d_t *pixel, const uint32_t block_halfsize, const uint32_t max_disparity, const bool search_right)
+int FindDisparity(
+	const vx_image source_img, const vx_image match_img,
+	const vx_coordinates2d_t *pixel, const uint32_t block_halfsize, 
+	const uint32_t max_disparity, const bool search_right)
 {
 	vx_rectangle_t template_block;
 	template_block.start_x = pixel->x - block_halfsize;
@@ -86,15 +102,20 @@ int FindDisparity(const vx_image source_img, const vx_image match_img, const vx_
 	template_block.end_x = pixel->x + block_halfsize;
 	template_block.end_y = pixel->y + block_halfsize;
 
-	uint32_t min_diff = UINT32_MAX;
+	const uint32_t NOT_DEFINED = UINT32_MAX;
+	uint32_t min_diff = NOT_DEFINED;
+	uint32_t prev_diff = NOT_DEFINED;
+	uint32_t next_diff = NOT_DEFINED;
 	uint32_t best_match_x = pixel->x;
 
 	vx_coordinates2d_t match_block;
 	match_block.y = template_block.start_y;
 
-	for (int disp = 0; disp < max_disparity; disp++)
+	int search_dir_sign = search_right ? +1 : -1;
+
+	for (int disp = 0; disp < (int)(max_disparity); disp++)
 	{
-		uint32_t match_x = search_right? pixel->x + disp : pixel->x - disp;
+		uint32_t match_x = pixel->x + disp * search_dir_sign;
 		if((int)(match_x - block_halfsize) < 0 || match_x + block_halfsize >= source_img->width)
 			break;
 
@@ -103,32 +124,32 @@ int FindDisparity(const vx_image source_img, const vx_image match_img, const vx_
 		uint32_t diff = SummaryAbsoluteDifference(source_img, match_img, &template_block, &match_block);
 		if (diff < min_diff)
 		{
-			min_diff = diff;
 			best_match_x = match_x;
+			prev_diff = min_diff;
+			min_diff  = diff;
+			next_diff = NOT_DEFINED;
+		}
+		if (best_match_x - match_x == 1)
+		{
+			next_diff = diff;
 		}
 	}
 
+	int disparity = (best_match_x - pixel->x) * search_dir_sign;
 
-	int disparity = search_right? best_match_x - pixel->x : pixel->x - best_match_x;
-
-	if (best_match_x <= pixel->x || best_match_x >= source_img->width - block_halfsize - 1 || best_match_x >= pixel->x + max_disparity - 1)
+	if (prev_diff == NOT_DEFINED || next_diff == NOT_DEFINED)
 	{
 		return disparity;
 	}
-	
-	match_block.x = best_match_x - block_halfsize - 1;
-	int c1 = SummaryAbsoluteDifference(source_img, match_img, &template_block, &match_block);
-
-	int c2 = min_diff;
-
-	match_block.x = best_match_x - block_halfsize + 1;
-	int c3 = SummaryAbsoluteDifference(source_img, match_img, &template_block, &match_block);
-		
-	disparity = SubPixelEstimation(disparity, c1, c2 ,c3);
-	return disparity;
+	else
+	{
+		return SubPixelEstimation(disparity, prev_diff, min_diff, next_diff);
+	}
 }
 
-uint32_t SummaryAbsoluteDifference(const vx_image source_img, const vx_image match_img, const vx_rectangle_t *template_block, vx_coordinates2d_t *match_block)
+uint32_t SummaryAbsoluteDifference(
+	const vx_image source_img, const vx_image match_img,
+	const vx_rectangle_t *template_block, vx_coordinates2d_t *match_block)
 {
 	uint32_t width = template_block->end_x - template_block->start_x + 1;
 	uint32_t height = template_block->end_y - template_block->start_y + 1;
@@ -148,18 +169,11 @@ uint32_t SummaryAbsoluteDifference(const vx_image source_img, const vx_image mat
 	return sum;
 }
 
-void FillBlock(vx_image image, const vx_rectangle_t *block, uint8_t color)
+int SubPixelEstimation(int disparity, int prev_cost, int current_cost, int next_cost)
 {
-	for (uint32_t y = block->start_y; y <= block->end_y; y++)
-	{
-		for (uint32_t x = block->start_x; x <= block->end_x; x++)
-		{
-			SetPixel(image, x, y, color);
-		}
-	}
-}
-
-int SubPixelEstimation(int disp, int c1, int c2, int c3)
-{
-	return (int)(disp - (0.5f * (float)(c3 - c1) / (float)(c1 - 2*c2 + c3)));
+	float denum = (float)(prev_cost - 2 * current_cost + next_cost);
+	if (denum != 0)
+		return (int)(disparity - 0.5f * (float)(next_cost - prev_cost) / denum);
+	else
+		return disparity;
 }
