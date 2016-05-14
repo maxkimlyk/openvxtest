@@ -60,10 +60,6 @@ vx_status ref_Threshold(const vx_image src_image, vx_image dst_image, const vx_t
 		disparity_image - результирующее изображение (16 bpp)
 		block_size - размер блока (окрестности пиксела), по которому сопоставляются пикселы. Должен быть нечетным.
 		max_disparty - максимальное значение смещения
-		search_right - если true, то для каждого пиксела с правого изображения ищется 
-			соответствующий ему пиксел на левом изображении (поиск просиходит вправо)
-			Иначе для каждого пиксела с левого изображения ищется соответствующий 
-			пиксел а правом изображении (поиск влево).
 		
 	Return:
 		VX_SUCCESS                  - в случае успешного завершения;
@@ -71,7 +67,7 @@ vx_status ref_Threshold(const vx_image src_image, vx_image dst_image, const vx_t
 */
 vx_status ref_DisparityMap(
 	const vx_image left_image, const vx_image right_image, vx_image disparity_image,
-	const uint32_t block_size, const int16_t max_disparity,	const bool search_right);
+	const uint32_t block_size, const int16_t max_disparity);
 
 /*
     Function: ref_ConnectedComponentsLabeling
