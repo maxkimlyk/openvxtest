@@ -121,7 +121,7 @@ void demo_DisparityMap::applyParameters(int, void* pointer)
 		VX_COLOR_SPACE_DEFAULT
 	};
 
-	ref_DisparityMap(&leftVXImage, &rightVXImage, &disparityVXImage, pThis->m_blockSize, (int16_t)pThis->m_disparityThreshold, true);
+	ref_DisparityMap(&leftVXImage, &rightVXImage, &disparityVXImage, pThis->m_blockSize, (int16_t)pThis->m_disparityThreshold, false);
 
 	const cv::Mat disparityMap16Bits = cv::Mat(size, CV_16SC1, disparityImageData);
 	cv::Mat       disparityMap8Bits;

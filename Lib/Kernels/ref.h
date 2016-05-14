@@ -55,12 +55,12 @@ vx_status ref_Threshold(const vx_image src_image, vx_image dst_image, const vx_t
 	Вычисляет карту смещений (disparity map) по паре стерео изображений.
 
 	Parameters:
-		left_image - изображение с левой камеры
-		right_image - изображение с правой камеры
-		disparity_image - результирующее изображение
+		left_image - изображение с левой камеры (8 bpp)
+		right_image - изображение с правой камеры (8 bpp)
+		disparity_image - результирующее изображение (16 bpp)
 		block_size - размер блока (окрестности пиксела), по которому сопоставляются пикселы. Должен быть нечетным.
-        max_disparty - максимальное значение смещения
-        search_right - если true, то для каждого пиксела с правого изображения ищется 
+		max_disparty - максимальное значение смещения
+		search_right - если true, то для каждого пиксела с правого изображения ищется 
 			соответствующий ему пиксел на левом изображении (поиск просиходит вправо)
 			Иначе для каждого пиксела с левого изображения ищется соответствующий 
 			пиксел а правом изображении (поиск влево).
@@ -70,12 +70,8 @@ vx_status ref_Threshold(const vx_image src_image, vx_image dst_image, const vx_t
 		VX_ERROR_INVALID_PARAMETERS - в случае некорректных данных.
 */
 vx_status ref_DisparityMap(
-	const vx_image left_image,
-	const vx_image right_image,
-	vx_image disparity_image,
-	const uint32_t block_size,
-	const int16_t max_disparity,
-	const bool search_right);
+	const vx_image left_image, const vx_image right_image, vx_image disparity_image,
+	const uint32_t block_size, const int16_t max_disparity,	const bool search_right);
 
 /*
     Function: ref_ConnectedComponentsLabeling
