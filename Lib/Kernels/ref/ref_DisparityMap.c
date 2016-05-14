@@ -256,14 +256,11 @@ void FreeBlockCostImage(vx_image block_cost_images, int16_t max_disparity)
 
 int16_t Disparity(vx_coordinates2d_t *pixel, vx_image block_cost_images, const int16_t max_disparity, const uint32_t block_halfsize)
 {
-	const uint32_t NOT_DEFINED = UINT32_MAX;
-	uint32_t min_diff = NOT_DEFINED;
-	//uint32_t prev_diff = NOT_DEFINED;
-	//uint32_t next_diff = NOT_DEFINED;
-	uint32_t best_disp = 0;
+	uint32_t min_diff = UINT32_MAX;
+	int16_t best_disp = 0;
 
-	// write this shit good enough
-	int16_t limit_disp = (int)(pixel->x) - max_disparity - (int)(block_halfsize) >= 0 ? max_disparity : (int16_t)(pixel->x - block_halfsize);
+
+	int16_t limit_disp = pixel->x >= block_halfsize + max_disparity ? max_disparity : (int16_t)(pixel->x - block_halfsize);
 
 	for (int16_t disp = 0; disp <= limit_disp; disp++)
 	{
@@ -273,6 +270,13 @@ int16_t Disparity(vx_coordinates2d_t *pixel, vx_image block_cost_images, const i
 			min_diff = diff;
 			best_disp = disp;
 		}
+	}
+
+	if (0 < best_disp && best_disp < limit_disp)
+	{
+		uint32_t prev_diff = GetPixel32U(&block_cost_images[best_disp - 1], pixel->x, pixel->y);
+		uint32_t next_diff = GetPixel32U(&block_cost_images[best_disp + 1], pixel->x, pixel->y);
+		return SubPixelEstimation(best_disp, prev_diff, min_diff, next_diff);
 	}
 
 	return best_disp;
