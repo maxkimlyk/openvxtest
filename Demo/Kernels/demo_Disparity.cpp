@@ -23,7 +23,7 @@ public:
 	demo_DisparityMap()
 	{
 		m_blockSize = 7;
-		m_disparityThreshold = 50;
+		m_disparityThreshold = 64;
 	}
 
 	///@see IDemoCase::ReplyName

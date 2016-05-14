@@ -23,7 +23,7 @@ vx_image CreateBlockCostImages(vx_image pixel_cost_images, uint32_t block_halfsi
 void     FillBlockCostImage(vx_image block_cost_image, vx_image pixel_cost_image, int16_t offset, uint32_t block_halfsize);
 void     FreeBlockCostImage(vx_image block_cost_images, int16_t max_disparity);
 
-int16_t Disparity(vx_coordinates2d_t *pixel, vx_image block_cost_images, const int16_t max_disparity, const uint32_t block_halfsize);
+int16_t Disparity(vx_coordinates2d_t *pixel, vx_image block_cost_images, const int16_t max_disparity, const uint32_t block_halfsize, float uniqueness_threshold);
 int16_t SubPixelEstimation(int16_t disparity, int prev_cost, int current_cost, int next_cost);
 
 uint32_t SummOverBlock(const vx_image match_cost_image, const vx_rectangle_t *block);
@@ -56,7 +56,7 @@ vx_status ref_DisparityMap(
 	{
 		for (pixel.x = block_halfsize; pixel.x < width - block_halfsize; pixel.x++)
 		{
-			int16_t disparity = Disparity(&pixel, block_cost_images, max_disparity, block_halfsize);
+			int16_t disparity = Disparity(&pixel, block_cost_images, max_disparity, block_halfsize, 30);
 			SetPixel16S(disp_img, pixel.x, pixel.y, disparity);
 		}
 	}
@@ -269,11 +269,10 @@ void FreeBlockCostImage(vx_image block_cost_images, int16_t max_disparity)
 	free(block_cost_images);
 }
 
-int16_t Disparity(vx_coordinates2d_t *pixel, vx_image block_cost_images, const int16_t max_disparity, const uint32_t block_halfsize)
+int16_t Disparity(vx_coordinates2d_t *pixel, vx_image block_cost_images, const int16_t max_disparity, const uint32_t block_halfsize, float uniqueness_threshold)
 {
 	uint32_t min_diff = UINT32_MAX;
 	int16_t best_disp = 0;
-
 
 	int16_t limit_disp = pixel->x >= block_halfsize + max_disparity ? max_disparity : (int16_t)(pixel->x - block_halfsize);
 
@@ -284,6 +283,20 @@ int16_t Disparity(vx_coordinates2d_t *pixel, vx_image block_cost_images, const i
 		{
 			min_diff = diff;
 			best_disp = disp;
+		}
+	}
+
+	if (uniqueness_threshold > 0)
+	{
+		uint32_t disp_uniqueness_threshold = (uint32_t)(min_diff * (1 + 0.01 * uniqueness_threshold));
+		for (int16_t disp = 0; disp <= limit_disp; disp++)
+		{
+			if (disp != best_disp && disp != best_disp - 1 && disp != best_disp + 1)
+			{
+				uint32_t diff = GetPixel32U(&block_cost_images[disp], pixel->x, pixel->y);
+				if (diff < disp_uniqueness_threshold)
+					return 0;
+			}
 		}
 	}
 
