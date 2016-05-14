@@ -20,8 +20,7 @@ vx_image CreatePixelCostImages(vx_image left_img, vx_image right_img, int16_t ma
 void     FreePixelCostImages(vx_image match_cost_images, int16_t max_disparity);
 
 vx_image CreateBlockCostImages(vx_image pixel_cost_images, uint32_t block_halfsize, int16_t max_disparity);
-uint32_t BlockCostEstimateFromLeft(vx_image pixel_cost_image, uint32_t x, uint32_t y, uint32_t left_cost, uint32_t block_halfsize);
-uint32_t BlockCostEstimateFromTop(vx_image pixel_cost_image, uint32_t x, uint32_t y, uint32_t top_cost, uint32_t block_halfsize);
+void     FillBlockCostImage(vx_image block_cost_image, vx_image pixel_cost_image, int16_t offset, uint32_t block_halfsize);
 void     FreeBlockCostImage(vx_image block_cost_images, int16_t max_disparity);
 
 int16_t Disparity(vx_coordinates2d_t *pixel, vx_image block_cost_images, const int16_t max_disparity, const uint32_t block_halfsize);
@@ -168,72 +167,88 @@ vx_image CreateBlockCostImages(vx_image pixel_cost_images, uint32_t block_halfsi
 
 	for (int16_t offset = 0; offset <= max_disparity; offset++)
 	{
-		uint32_t x = offset + block_halfsize;
-		uint32_t y = block_halfsize;
-
-		vx_rectangle_t block;
-		block.start_x = x - block_halfsize;
-		block.start_y = y - block_halfsize;
-		block.end_x = x + block_halfsize;
-		block.end_y = y + block_halfsize;
-
-		uint32_t cost = SummOverBlock(&pixel_cost_images[offset], &block);
-		SetPixel32U(&block_cost_images[offset], x, y, cost);
-
-		for (x++; x < width - block_halfsize; x++)
-		{
-			cost = BlockCostEstimateFromLeft(&pixel_cost_images[offset], x, y, cost, block_halfsize);
-			SetPixel32U(&block_cost_images[offset], x, y, cost);
-		}
-
-		for (y++; y < height - block_halfsize; y++)
-		{
-			for (uint32_t x = block_halfsize + offset; x < width - block_halfsize; x++)
-			{
-				cost = GetPixel32U(&block_cost_images[offset], x, y - 1);
-				cost = BlockCostEstimateFromTop(&pixel_cost_images[offset], x, y, cost, block_halfsize);
-				SetPixel32U(&block_cost_images[offset], x, y, cost);
-			}
-		}
+		FillBlockCostImage(&block_cost_images[offset], &pixel_cost_images[offset], offset, block_halfsize);
 	}
 
 	return block_cost_images;
 }
 
-uint32_t BlockCostEstimateFromLeft(vx_image pixel_cost_image, uint32_t x, uint32_t y, uint32_t left_cost, uint32_t block_halfsize)
+void FillBlockCostImage(vx_image block_cost_image, vx_image pixel_cost_image, int16_t offset, uint32_t block_halfsize)
 {
-	vx_rectangle_t temp_block;
-	temp_block.start_x = x - 1 - block_halfsize;
-	temp_block.end_x = x - 1 - block_halfsize;
-	temp_block.start_y = y - block_halfsize;
-	temp_block.end_y = y + block_halfsize;
+	uint32_t width = block_cost_image->width;
+	uint32_t height = block_cost_image->height;
+	uint32_t x = offset + block_halfsize;
+	uint32_t y = block_halfsize;
 
-	uint32_t take = SummOverBlock(pixel_cost_image, &temp_block);
+	// first pixel
+	vx_rectangle_t block;
+	block.start_x = x - block_halfsize;
+	block.start_y = y - block_halfsize;
+	block.end_x = x + block_halfsize;
+	block.end_y = y + block_halfsize;
 
-	temp_block.start_x = x + block_halfsize;
-	temp_block.end_x = x + block_halfsize;
+	uint32_t cost = SummOverBlock(pixel_cost_image, &block);
+	SetPixel32U(block_cost_image, x, y, cost);
 
-	uint32_t add = SummOverBlock(pixel_cost_image, &temp_block);
+	uint32_t take;
+	uint32_t add;
 
-	return left_cost - take + add;
-}
+	// first row
+	for (x++; x < width - block_halfsize; x++)
+	{
+		block.start_x = x - 1 - block_halfsize;
+		block.end_x = x - 1 - block_halfsize;
+		block.start_y = y - block_halfsize;
+		block.end_y = y + block_halfsize;
 
-uint32_t BlockCostEstimateFromTop(vx_image pixel_cost_image, uint32_t x, uint32_t y, uint32_t top_cost, uint32_t block_halfsize)
-{
-	vx_rectangle_t temp_block;
-	temp_block.start_x = x - block_halfsize;
-	temp_block.end_x = x + block_halfsize;
-	temp_block.start_y = y - 1 - block_halfsize;
-	temp_block.end_y = y - 1 - block_halfsize;
+		take = SummOverBlock(pixel_cost_image, &block);
 
-	uint32_t take = SummOverBlock(pixel_cost_image, &temp_block);
+		block.start_x = x + block_halfsize;
+		block.end_x = x + block_halfsize;
 
-	temp_block.start_y = y + block_halfsize;
-	temp_block.end_y = y + block_halfsize;
+		add = SummOverBlock(pixel_cost_image, &block);
 
-	uint32_t add = SummOverBlock(pixel_cost_image, &temp_block);
+		cost = cost - take + add;
+		SetPixel32U(block_cost_image, x, y, cost);
+	}
 
-	return top_cost - take + add;
+	for (y++; y < height - block_halfsize; y++)
+	{
+		// first pixel in row
+		x = block_halfsize + offset;
+		cost = GetPixel32U(block_cost_image, x, y - 1);
+
+		block.start_x = x - block_halfsize;
+		block.end_x = x + block_halfsize;
+		block.start_y = y - 1 - block_halfsize;
+		block.end_y = y - 1 - block_halfsize;
+
+		take = SummOverBlock(pixel_cost_image, &block);
+
+		block.start_y = y + block_halfsize;
+		block.end_y = y + block_halfsize;
+
+		add = SummOverBlock(pixel_cost_image, &block);
+
+		cost = cost - take + add;
+		SetPixel32U(block_cost_image, x, y, cost);
+
+		// other pixels in row
+		for (x++; x < width - block_halfsize; x++)
+		{
+			uint32_t take_take = GetPixel8U(pixel_cost_image, x - 1 - block_halfsize, y - 1 - block_halfsize);
+			uint32_t take_add = GetPixel8U(pixel_cost_image, x + block_halfsize, y - 1 - block_halfsize);
+			take = take - take_take + take_add;
+
+			uint32_t add_take = GetPixel8U(pixel_cost_image, x - 1 - block_halfsize, y + block_halfsize);
+			uint32_t add_add = GetPixel8U(pixel_cost_image, x + block_halfsize, y + block_halfsize);
+			add = add - add_take + add_add;
+
+			cost = GetPixel32U(block_cost_image, x, y - 1);
+			cost = cost - take + add;
+			SetPixel32U(block_cost_image, x, y, cost);
+		}
+	}
 }
 
 void FreePixelCostImages(vx_image match_cost_images, int16_t max_disparity)
