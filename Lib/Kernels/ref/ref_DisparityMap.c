@@ -27,6 +27,13 @@ int16_t Disparity(vx_coordinates2d_t *pixel, vx_image block_cost_images, const i
 int16_t SubPixelEstimation(int16_t disparity, int prev_cost, int current_cost, int next_cost);
 
 uint32_t SummOverBlock(const vx_image match_cost_image, const vx_rectangle_t *block);
+
+void    InterpolateBadPixels(vx_image image);
+int16_t Interpolate(vx_image image, vx_coordinates2d_t *pixel);
+///////////////////////////////////////////////////////////////////////////////
+
+// GLOBAL CONSTANTS
+#define UNRELIABLE 0
 ///////////////////////////////////////////////////////////////////////////////
 
 vx_status ref_DisparityMap(
@@ -62,6 +69,8 @@ vx_status ref_DisparityMap(
 	}
 
 	FreeBlockCostImage(block_cost_images, max_disparity);
+
+	InterpolateBadPixels(disp_img);
 
 	return VX_SUCCESS;
 }
@@ -295,7 +304,7 @@ int16_t Disparity(vx_coordinates2d_t *pixel, vx_image block_cost_images, const i
 			{
 				uint32_t diff = GetPixel32U(&block_cost_images[disp], pixel->x, pixel->y);
 				if (diff < disp_uniqueness_threshold)
-					return 0;
+					return UNRELIABLE;
 			}
 		}
 	}
@@ -332,4 +341,65 @@ uint32_t SummOverBlock(const vx_image match_cost_image, const vx_rectangle_t *bl
 	}
 
 	return sum;
+}
+
+void InterpolateBadPixels(vx_image image)
+{
+	vx_coordinates2d_t pixel;
+	for (pixel.y = 0; pixel.y < image->height; pixel.y++)
+	{
+		for (pixel.x = 0; pixel.x < image->width; pixel.x++)
+		{
+			if (GetPixel16S(image, pixel.x, pixel.y) == UNRELIABLE)
+			{
+				int16_t new_value = Interpolate(image, &pixel);
+				SetPixel16S(image, pixel.x, pixel.y, new_value);
+			}
+		}
+	}
+}
+
+int16_t Interpolate(vx_image image, vx_coordinates2d_t *pixel)
+{
+	const int16_t kernel[] = {
+		1, 2, 3, 2, 1,
+		2, 4, 6, 4, 2,
+		3, 6, 9, 6, 3,
+		2, 4, 6, 4, 2,
+		1, 2, 3, 2, 1
+	};
+	const uint32_t kernel_halfsize = 2;
+	const uint32_t kernel_size = 5;
+
+	int sum = 0;
+	int weight = 0;
+	uint32_t num_valid = 0;
+
+	for (uint32_t i = 0; i < kernel_size; i++)
+	{
+		for (uint32_t j = 0; j < kernel_size; j++)
+		{
+			int x = (int)(pixel->x) - (int)kernel_halfsize + (int)(j);
+			int y = (int)(pixel->y) - (int)kernel_halfsize + (int)(i);
+
+			if (x < 0 || y < 0 || x >= (int)(image->width) || y >= (int)(image->height))
+				continue;
+
+			int16_t current_pixel = GetPixel16S(image, x, y);
+			if (current_pixel == UNRELIABLE)
+				continue;
+
+			sum += kernel[i*kernel_size + j] * current_pixel;
+			weight += kernel[i*kernel_size + j];
+			num_valid++;
+		}
+	}
+
+	if (num_valid > 5 && abs(sum) > 30)
+	{
+		int16_t interpolated = (int16_t)(sum / weight);
+		return interpolated;
+	}
+	else
+		return UNRELIABLE;
 }
