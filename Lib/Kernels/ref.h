@@ -59,7 +59,10 @@ vx_status ref_Threshold(const vx_image src_image, vx_image dst_image, const vx_t
 		right_image - изображение с правой камеры (8 bpp)
 		disparity_image - результирующее изображение (16 bpp)
 		block_size - размер блока (окрестности пиксела), по которому сопоставляются пикселы. Должен быть нечетным.
-		max_disparty - максимальное значение смещения
+		max_disparty - максимальное значение смещения.
+		uniqueness_threshold - минимальное значение уникальности при сопоставлении блоков. Увеличение этого параметра 
+			приведет к увеличению точек, для которых будет считаться, что смещение (disparity) посчитано ненадежно.
+			Значение 0 отключит проверку на уникальность.
 		
 	Return:
 		VX_SUCCESS                  - в случае успешного завершения;
@@ -67,7 +70,7 @@ vx_status ref_Threshold(const vx_image src_image, vx_image dst_image, const vx_t
 */
 vx_status ref_DisparityMap(
 	const vx_image left_image, const vx_image right_image, vx_image disparity_image,
-	const uint32_t block_size, const int16_t max_disparity);
+	const uint32_t block_size, const int16_t max_disparity, const uint32_t uniqueness_threshold);
 
 /*
     Function: ref_ConnectedComponentsLabeling
