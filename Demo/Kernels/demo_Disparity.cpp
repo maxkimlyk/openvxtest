@@ -24,6 +24,7 @@ public:
 	{
 		m_blockSize = 7;
 		m_disparityThreshold = 64;
+		m_uniquenessThreshold = 15;
 	}
 
 	///@see IDemoCase::ReplyName
@@ -46,6 +47,7 @@ private:
 
 	int m_blockSize;
 	int m_disparityThreshold;
+	int m_uniquenessThreshold;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -66,6 +68,7 @@ void demo_DisparityMap::execute()
 	
 	cv::createTrackbar("Block Size", ControlsWindowName, &m_blockSize, 20, applyParameters, this);
 	cv::createTrackbar("Max Disp", ControlsWindowName, &m_disparityThreshold, 120, applyParameters, this);
+	cv::createTrackbar("Uniq Thres", ControlsWindowName, &m_uniquenessThreshold, 50, applyParameters, this);
 
 	const std::string leftImgPath = "..\\Image\\disparity\\01left.png";
 	const std::string rightImgPath = "..\\Image\\disparity\\01right.png";
@@ -121,7 +124,8 @@ void demo_DisparityMap::applyParameters(int, void* pointer)
 		VX_COLOR_SPACE_DEFAULT
 	};
 
-	ref_DisparityMap(&leftVXImage, &rightVXImage, &disparityVXImage, pThis->m_blockSize, (int16_t)pThis->m_disparityThreshold, 30);
+	ref_DisparityMap(&leftVXImage, &rightVXImage, &disparityVXImage, 
+		pThis->m_blockSize, (int16_t)pThis->m_disparityThreshold, (uint32_t)pThis->m_uniquenessThreshold);
 
 	const cv::Mat disparityMap16Bits = cv::Mat(size, CV_16SC1, disparityImageData);
 	cv::Mat       disparityMap8Bits;
