@@ -62,8 +62,8 @@ namespace
 ///////////////////////////////////////////////////////////////////////////////
 void demo_DisparityMap::execute()
 {
-	cv::namedWindow(SourceImageWindowName, CV_WINDOW_NORMAL);
-	cv::namedWindow(DisparityMapWindowName, CV_WINDOW_NORMAL);
+	cv::namedWindow(SourceImageWindowName, CV_WINDOW_AUTOSIZE);
+	cv::namedWindow(DisparityMapWindowName, CV_WINDOW_AUTOSIZE);
 	cv::namedWindow(ControlsWindowName, CV_WINDOW_AUTOSIZE | CV_GUI_NORMAL);
 	
 	cv::createTrackbar("Block Size", ControlsWindowName, &m_blockSize, 20, applyParameters, this);
