@@ -5,6 +5,7 @@
 
 #include "../stdafx.h"
 #include <opencv2/opencv.hpp>
+#include <opencv2/calib3d.hpp>
 
 extern "C"
 {
@@ -23,7 +24,7 @@ public:
 	demo_DisparityMap()
 	{
 		m_blockHalfsize = 3;
-		m_disparityThreshold = 64;
+		m_numDisparities = 64;
 		m_uniquenessThreshold = 15;
 	}
 
@@ -46,7 +47,7 @@ private:
 	cv::Mat m_sourceImage;
 
 	int m_blockHalfsize;
-	int m_disparityThreshold;
+	int m_numDisparities;
 	int m_uniquenessThreshold;
 };
 
@@ -54,9 +55,9 @@ private:
 namespace
 {
 	const std::string SourceImageWindowName = "Source Image";
-	const std::string DisparityMapWindowName = "Disparity Map";
+	const std::string DisparityMapWindowName = "My Disparity Map";
 	const std::string ControlsWindowName = "Controls";
-	
+	const std::string CVDisparityMapWindowName = "OpevCV Disparity Map";
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -64,10 +65,11 @@ void demo_DisparityMap::execute()
 {
 	cv::namedWindow(SourceImageWindowName, CV_WINDOW_AUTOSIZE);
 	cv::namedWindow(DisparityMapWindowName, CV_WINDOW_AUTOSIZE);
+	cv::namedWindow(CVDisparityMapWindowName, CV_WINDOW_AUTOSIZE);
 	cv::namedWindow(ControlsWindowName, CV_WINDOW_AUTOSIZE | CV_GUI_NORMAL);
 	
 	cv::createTrackbar("BlckSize/2", ControlsWindowName, &m_blockHalfsize, 20, applyParameters, this);
-	cv::createTrackbar("Max Disp", ControlsWindowName, &m_disparityThreshold, 120, applyParameters, this);
+	cv::createTrackbar("Max Disp", ControlsWindowName, &m_numDisparities, 120, applyParameters, this);
 	cv::createTrackbar("Uniq Thres", ControlsWindowName, &m_uniquenessThreshold, 50, applyParameters, this);
 
 	const std::string leftImgPath = "..\\Image\\disparity\\01left.png";
@@ -126,7 +128,7 @@ void demo_DisparityMap::applyParameters(int, void* pointer)
 
 	ref_DisparityMap(
 		&leftVXImage, &rightVXImage, &disparityVXImage, 
-		pThis->m_blockHalfsize * 2, (int16_t)pThis->m_disparityThreshold, (uint32_t)pThis->m_uniquenessThreshold);
+		pThis->m_blockHalfsize * 2 + 1, (int16_t)pThis->m_numDisparities, (uint32_t)pThis->m_uniquenessThreshold);
 
 	const cv::Mat disparityMap16Bits = cv::Mat(size, CV_16SC1, disparityImageData);
 	cv::Mat       disparityMap8Bits;
@@ -137,12 +139,30 @@ void demo_DisparityMap::applyParameters(int, void* pointer)
 	if (maxVal - minVal != 0)
 	{
 		disparityMap16Bits.convertTo(disparityMap8Bits, CV_8UC1, 255 / (maxVal - minVal));
-		cv::applyColorMap(disparityMap8Bits, disparityMap8Bits, cv::ColormapTypes::COLORMAP_JET);
+		//cv::applyColorMap(disparityMap8Bits, disparityMap8Bits, cv::ColormapTypes::COLORMAP_JET);
 
 		cv::imshow(DisparityMapWindowName, disparityMap8Bits);
 	}
 	
 	free(disparityImageData);
+
+	int numDisparities = (pThis->m_numDisparities / 16) * 16;
+	int sadWindowSize = pThis->m_blockHalfsize * 2 + 1;
+
+	cv::Ptr<cv::StereoBM> sbm = cv::StereoBM::create(numDisparities, sadWindowSize);
+	sbm->setUniquenessRatio(pThis->m_uniquenessThreshold);
+	sbm->setMinDisparity(0);
+	
+	cv::Mat cvDisparityMap16Bits = cv::Mat(pThis->m_leftImage.rows, pThis->m_rightImage.cols, CV_16S);
+	sbm->compute(pThis->m_leftImage, pThis->m_rightImage, cvDisparityMap16Bits);
+
+	minMaxLoc(cvDisparityMap16Bits, &minVal, &maxVal);
+
+	if (maxVal - minVal != 0)
+	{
+		cvDisparityMap16Bits.convertTo(disparityMap8Bits, CV_8UC1, 255 / (maxVal - minVal));
+		cv::imshow(CVDisparityMapWindowName, disparityMap8Bits);
+	}
 
 	///@}
 }
