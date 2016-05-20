@@ -70,7 +70,7 @@ vx_status ref_DisparityMap(
 
 	for (pixel.y = block_halfsize; pixel.y < height - block_halfsize; pixel.y++)
 	{
-		for (pixel.x = block_halfsize; pixel.x < width - block_halfsize; pixel.x++)
+		for (pixel.x = (uint32_t)(max_disparity); pixel.x < width - block_halfsize; pixel.x++)
 		{
 			int16_t disparity = Disparity(&pixel, block_cost_images, max_disparity, block_halfsize, uniqueness_threshold);
 			SetPixel16S(disp_img, pixel.x, pixel.y, disparity);
