@@ -39,7 +39,7 @@ typedef std::unique_ptr<IDemoCase> IDemoCasePtr;
 ///////////////////////////////////////////////////////////////////////////////
 ///@brief create Thresholding demo and returns pointer to IDemoCase
 IDemoCasePtr CreateThresholdingDemo();
-IDemoCasePtr CreateDisparityMapDemo();
+IDemoCasePtr CreateDisparityMapDemo(const std::string image);
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -58,7 +58,8 @@ public:
    {
       // TODO: add your demos here
       //m_demoRegistry.push_back(CreateThresholdingDemo());
-	  m_demoRegistry.push_back(CreateDisparityMapDemo());
+	  m_demoRegistry.push_back(CreateDisparityMapDemo("toys"));
+	  m_demoRegistry.push_back(CreateDisparityMapDemo("cones"));
    }
 
    ///@brief Execute demos

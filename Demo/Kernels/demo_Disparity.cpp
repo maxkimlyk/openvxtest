@@ -21,8 +21,9 @@ class demo_DisparityMap: public IDemoCase
 {
 public:
 	///@brief defaut constructor
-	demo_DisparityMap()
+	demo_DisparityMap(const std::string image)
 	{
+		m_image = image;
 		m_blockHalfsize = 5;
 		m_numDisparities = 64;
 		m_uniquenessThreshold = 15;
@@ -31,7 +32,7 @@ public:
 	///@see IDemoCase::ReplyName
 	virtual std::string ReplyName() const override
 	{
-		return "DisparityMap";
+		return "DisparityMap: " + m_image;
 	}
 
 private:
@@ -42,6 +43,8 @@ private:
 	static void applyParameters(int pos, void* data);
 
 private:
+	std::string m_image;
+
 	cv::Mat m_leftImage;
 	cv::Mat m_rightImage;
 	cv::Mat m_sourceImage;
@@ -72,8 +75,8 @@ void demo_DisparityMap::execute()
 	cv::createTrackbar("Max Disp", ControlsWindowName, &m_numDisparities, 120, applyParameters, this);
 	cv::createTrackbar("Uniq Thres", ControlsWindowName, &m_uniquenessThreshold, 50, applyParameters, this);
 
-	const std::string leftImgPath = "..\\Image\\disparity\\01left.png";
-	const std::string rightImgPath = "..\\Image\\disparity\\01right.png";
+	const std::string leftImgPath = "..\\Image\\disparity\\" + m_image + "_left.png";
+	const std::string rightImgPath = "..\\Image\\disparity\\" + m_image + "_right.png";
 
 	m_leftImage = cv::imread(leftImgPath, CV_LOAD_IMAGE_GRAYSCALE);
 	m_rightImage = cv::imread(rightImgPath, CV_LOAD_IMAGE_GRAYSCALE);
@@ -172,7 +175,7 @@ void demo_DisparityMap::applyParameters(int, void* pointer)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-IDemoCasePtr CreateDisparityMapDemo()
+IDemoCasePtr CreateDisparityMapDemo(const std::string image)
 {
-	return std::make_unique<demo_DisparityMap>();
+	return std::make_unique<demo_DisparityMap>(image);
 }
