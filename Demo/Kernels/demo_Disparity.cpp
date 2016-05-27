@@ -23,7 +23,7 @@ public:
 	///@brief defaut constructor
 	demo_DisparityMap()
 	{
-		m_blockHalfsize = 3;
+		m_blockHalfsize = 5;
 		m_numDisparities = 64;
 		m_uniquenessThreshold = 15;
 	}
@@ -63,9 +63,9 @@ namespace
 ///////////////////////////////////////////////////////////////////////////////
 void demo_DisparityMap::execute()
 {
-	cv::namedWindow(SourceImageWindowName, CV_WINDOW_AUTOSIZE);
-	cv::namedWindow(DisparityMapWindowName, CV_WINDOW_AUTOSIZE);
-	cv::namedWindow(CVDisparityMapWindowName, CV_WINDOW_AUTOSIZE);
+	cv::namedWindow(SourceImageWindowName, CV_WINDOW_NORMAL | CV_WINDOW_AUTOSIZE);
+	cv::namedWindow(DisparityMapWindowName, CV_WINDOW_NORMAL | CV_WINDOW_AUTOSIZE);
+	cv::namedWindow(CVDisparityMapWindowName, CV_WINDOW_NORMAL | CV_WINDOW_AUTOSIZE);
 	cv::namedWindow(ControlsWindowName, CV_WINDOW_AUTOSIZE | CV_GUI_NORMAL);
 	
 	cv::createTrackbar("BlckSize/2", ControlsWindowName, &m_blockHalfsize, 20, applyParameters, this);
@@ -139,8 +139,6 @@ void demo_DisparityMap::applyParameters(int, void* pointer)
 	if (maxVal - minVal != 0)
 	{
 		disparityMap16Bits.convertTo(disparityMap8Bits, CV_8UC1, 255 / (maxVal - minVal));
-		//cv::applyColorMap(disparityMap8Bits, disparityMap8Bits, cv::ColormapTypes::COLORMAP_JET);
-
 		cv::imshow(DisparityMapWindowName, disparityMap8Bits);
 	}
 	
@@ -152,6 +150,8 @@ void demo_DisparityMap::applyParameters(int, void* pointer)
 	cv::Ptr<cv::StereoBM> sbm = cv::StereoBM::create(numDisparities, sadWindowSize);
 	sbm->setUniquenessRatio(pThis->m_uniquenessThreshold);
 	sbm->setMinDisparity(0);
+	sbm->setPreFilterSize(5);
+	sbm->setPreFilterCap(31);
 	
 	cv::Mat cvDisparityMap16Bits = cv::Mat(pThis->m_leftImage.rows, pThis->m_rightImage.cols, CV_16S);
 	sbm->compute(pThis->m_leftImage, pThis->m_rightImage, cvDisparityMap16Bits);

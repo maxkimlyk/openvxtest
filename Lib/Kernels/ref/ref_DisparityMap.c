@@ -8,6 +8,7 @@
 
 // Function prototypes
 bool CheckImageSizes(const vx_image left_img, const vx_image right_img, const vx_image disp_img);
+bool CheckImageFormats(const vx_image left_img, const vx_image right_img, const vx_image disp_img);
 
 uint8_t GetPixel8U(const vx_image image, uint32_t x, uint32_t y);
 void    SetPixel8U(vx_image image, uint32_t x, uint32_t y, uint8_t value);
@@ -38,14 +39,14 @@ int16_t Interpolate(vx_image image, vx_coordinates2d_t *pixel);
 ///////////////////////////////////////////////////////////////////////////////
 
 // GLOBAL CONSTANTS
-#define UNRELIABLE 0
+#define UNRELIABLE -1
 ///////////////////////////////////////////////////////////////////////////////
 
 vx_status ref_DisparityMap(
 	const vx_image left_img, const vx_image right_img, vx_image disp_img,
 	const uint32_t block_size, const int16_t max_disparity, const uint32_t uniqueness_threshold)
 {
-	if (!CheckImageSizes(left_img, right_img, disp_img))
+	if (!CheckImageSizes(left_img, right_img, disp_img) || !CheckImageFormats(left_img, right_img, disp_img))
 	{
 		return VX_ERROR_INVALID_PARAMETERS;
 	}
@@ -79,8 +80,6 @@ vx_status ref_DisparityMap(
 
 	FreeImageArray(block_cost_images, (size_t)(max_disparity + 1));
 
-	//InterpolateBadPixels(disp_img);
-
 	return VX_SUCCESS;
 }
 
@@ -88,6 +87,11 @@ bool CheckImageSizes(const vx_image left_img, const vx_image right_img, const vx
 {
 	return (left_img->width == right_img->width && left_img->width == disp_img->width &&
 		left_img->height == right_img->height && left_img->height == disp_img->height);
+}
+
+bool CheckImageFormats(const vx_image left_img, const vx_image right_img, const vx_image disp_img)
+{
+	return (left_img->image_type == VX_DF_IMAGE_U8 && right_img->image_type == VX_DF_IMAGE_U8 && disp_img->image_type == VX_DF_IMAGE_S16);
 }
 
 uint8_t GetPixel8U(const vx_image image, uint32_t x, uint32_t y)
@@ -143,6 +147,7 @@ vx_image SobelFilter(vx_image src)
 		-2, 0, 2,
 		-1, 0, 1
 	};
+
 	const uint32_t kernel_halfsize = 1;
 	const uint32_t kernel_size = 3;
 
