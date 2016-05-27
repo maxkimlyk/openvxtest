@@ -51,8 +51,6 @@ vx_status ref_DisparityMap(
 		return VX_ERROR_INVALID_PARAMETERS;
 	}
 
-	// TODO: check image formats
-
 	const uint32_t width = left_img->width;
 	const uint32_t height = left_img->height;
 	const uint32_t block_halfsize = block_size / 2;
@@ -164,7 +162,6 @@ vx_image SobelFilter(vx_image src)
 					sum += kernel[i * kernel_size + j] * pixel;
 				}
 			}
-			// TODO: deside: abs or not abs
 			SetPixel16S(dest, x, y, (int16_t)(sum));
 		}
 	}

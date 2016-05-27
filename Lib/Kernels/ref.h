@@ -52,7 +52,7 @@ vx_status ref_Threshold(const vx_image src_image, vx_image dst_image, const vx_t
 /*
 	Function: ref_DisparityMap
 	
-	Вычисляет карту смещений (disparity map) по паре стерео изображений.
+	Вычисляет карту смещений (disparity map) по паре изображений.
 
 	Parameters:
 		left_image - изображение с левой камеры (8 bpp)
