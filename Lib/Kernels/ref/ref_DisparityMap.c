@@ -6,7 +6,7 @@
 #include "../ref.h"
 #include <memory.h>
 
-// Function prototypes
+// FUNCTION PROTOTYPES
 bool CheckImageSizes(const vx_image left_img, const vx_image right_img, const vx_image disp_img);
 bool CheckImageFormats(const vx_image left_img, const vx_image right_img, const vx_image disp_img);
 
@@ -17,20 +17,20 @@ void    SetPixel16S(vx_image image, uint32_t x, uint32_t y, int16_t value);
 uint32_t GetPixel32U(const vx_image image, uint32_t x, uint32_t y);
 void     SetPixel32U(vx_image image, uint32_t x, uint32_t y, uint32_t value);
 
-vx_image SobelFilter(vx_image src);
+vx_image SobelFilter(const vx_image src);
 
-vx_image CreatePixelCostImages(vx_image left_img, vx_image right_img, int16_t max_disparity);
-vx_image CreateBlockCostImages(vx_image pixel_cost_images, uint32_t block_halfsize, int16_t max_disparity);
-void     FillBlockCostImage(vx_image block_cost_image, vx_image pixel_cost_image, int16_t offset, uint32_t block_halfsize);
+vx_image CreatePixelCostImages(const vx_image left_img, const vx_image right_img, const int16_t max_disparity);
+vx_image CreateBlockCostImages(const vx_image pixel_cost_images, const uint32_t block_halfsize, const int16_t max_disparity);
+void     FillBlockCostImage(const vx_image block_cost_image, const vx_image pixel_cost_image, const int16_t disp, const uint32_t block_halfsize);
 
 void FreeImage(vx_image image);
 void FreeImageArray(vx_image images, int32_t size);
 
 int16_t Disparity(
-	vx_coordinates2d_t *pixel, vx_image block_cost_images,
+	const vx_coordinates2d_t pixel, const vx_image block_cost_images,
 	const int16_t max_disparity, const uint32_t block_halfsize, const uint32_t uniqueness_threshold);
 
-int16_t SubPixelEstimation(int16_t disparity, int prev_cost, int current_cost, int next_cost);
+int16_t SubPixelEstimation(const int16_t disparity, const int prev_cost, const int current_cost, const int next_cost);
 
 uint32_t SummOverBlock(const vx_image match_cost_image, const vx_rectangle_t *block);
 
@@ -39,7 +39,7 @@ int16_t Interpolate(vx_image image, vx_coordinates2d_t *pixel);
 ///////////////////////////////////////////////////////////////////////////////
 
 // GLOBAL CONSTANTS
-#define UNRELIABLE -1
+#define DISP_UNRELIABLE -1
 ///////////////////////////////////////////////////////////////////////////////
 
 vx_status ref_DisparityMap(
@@ -71,7 +71,7 @@ vx_status ref_DisparityMap(
 	{
 		for (pixel.x = (uint32_t)(max_disparity); pixel.x < width - block_halfsize; pixel.x++)
 		{
-			int16_t disparity = Disparity(&pixel, block_cost_images, max_disparity, block_halfsize, uniqueness_threshold);
+			int16_t disparity = Disparity(pixel, block_cost_images, max_disparity, block_halfsize, uniqueness_threshold);
 			SetPixel16S(disp_img, pixel.x, pixel.y, disparity);
 		}
 	}
@@ -89,7 +89,9 @@ bool CheckImageSizes(const vx_image left_img, const vx_image right_img, const vx
 
 bool CheckImageFormats(const vx_image left_img, const vx_image right_img, const vx_image disp_img)
 {
-	return (left_img->image_type == VX_DF_IMAGE_U8 && right_img->image_type == VX_DF_IMAGE_U8 && disp_img->image_type == VX_DF_IMAGE_S16);
+	return (left_img->image_type == VX_DF_IMAGE_U8 && 
+		right_img->image_type == VX_DF_IMAGE_U8 &&
+		disp_img->image_type == VX_DF_IMAGE_S16);
 }
 
 uint8_t GetPixel8U(const vx_image image, uint32_t x, uint32_t y)
@@ -128,7 +130,7 @@ void SetPixel32U(vx_image image, uint32_t x, uint32_t y, uint32_t value)
 	pixels[y * image->width + x] = value;
 }
 
-vx_image SobelFilter(vx_image src)
+vx_image SobelFilter(const vx_image src)
 {
 	const uint32_t width = src->width;
 	const uint32_t height = src->height;
@@ -169,11 +171,11 @@ vx_image SobelFilter(vx_image src)
 	return dest;
 }
 
-vx_image CreatePixelCostImages(vx_image left_img, vx_image right_img, int16_t max_disparity)
+vx_image CreatePixelCostImages(const vx_image left_img, const vx_image right_img, const int16_t max_disparity)
 {
-	uint32_t width = left_img->width;
-	uint32_t height = right_img->height;
-	uint32_t num_disparities = max_disparity + 1;
+	const uint32_t width = left_img->width;
+	const uint32_t height = right_img->height;
+	const uint32_t num_disparities = max_disparity + 1;
 
 	vx_image match_cost_images = (vx_image)calloc(num_disparities, sizeof(struct _vx_image));
 
@@ -192,14 +194,14 @@ vx_image CreatePixelCostImages(vx_image left_img, vx_image right_img, int16_t ma
 		{
 			int16_t left_pixel = GetPixel16S(left_img, x, y);
 
-			for (int16_t offset = 0; offset <= max_disparity; offset++)
+			for (int16_t disp = 0; disp <= max_disparity; disp++)
 			{
-				if ((int)x - (int)offset < 0)
+				if ((int)x - (int)disp < 0)
 					break;
 
-				int16_t right_pixel = GetPixel16S(right_img, x - offset, y);
+				int16_t right_pixel = GetPixel16S(right_img, x - disp, y);
 				int16_t matching_cost = (int16_t)abs(left_pixel - right_pixel);
-				SetPixel16S(&match_cost_images[offset], x, y, matching_cost);
+				SetPixel16S(&match_cost_images[disp], x, y, matching_cost);
 			}
 		}
 	}
@@ -207,11 +209,11 @@ vx_image CreatePixelCostImages(vx_image left_img, vx_image right_img, int16_t ma
 	return match_cost_images;
 }
 
-vx_image CreateBlockCostImages(vx_image pixel_cost_images, uint32_t block_halfsize, int16_t max_disparity)
+vx_image CreateBlockCostImages(const vx_image pixel_cost_images, const uint32_t block_halfsize, const int16_t max_disparity)
 {
-	uint32_t width = pixel_cost_images[0].width;
-	uint32_t height = pixel_cost_images[0].height;
-	uint32_t num_disparities = max_disparity + 1;
+	const uint32_t width = pixel_cost_images[0].width;
+	const uint32_t height = pixel_cost_images[0].height;
+	const uint32_t num_disparities = max_disparity + 1;
 
 	vx_image block_cost_images = (vx_image)calloc(num_disparities, sizeof(struct _vx_image));
 
@@ -224,19 +226,19 @@ vx_image CreateBlockCostImages(vx_image pixel_cost_images, uint32_t block_halfsi
 		block_cost_images[i].color_space = VX_COLOR_SPACE_DEFAULT;
 	}
 
-	for (int16_t offset = 0; offset <= max_disparity; offset++)
+	for (int16_t disp = 0; disp <= max_disparity; disp++)
 	{
-		FillBlockCostImage(&block_cost_images[offset], &pixel_cost_images[offset], offset, block_halfsize);
+		FillBlockCostImage(&block_cost_images[disp], &pixel_cost_images[disp], disp, block_halfsize);
 	}
 
 	return block_cost_images;
 }
 
-void FillBlockCostImage(vx_image block_cost_image, vx_image pixel_cost_image, int16_t offset, uint32_t block_halfsize)
+void FillBlockCostImage(const vx_image block_cost_image, const vx_image pixel_cost_image, const int16_t disp, const uint32_t block_halfsize)
 {
-	uint32_t width = block_cost_image->width;
-	uint32_t height = block_cost_image->height;
-	uint32_t x = offset + block_halfsize;
+	const uint32_t width = block_cost_image->width;
+	const uint32_t height = block_cost_image->height;
+	uint32_t x = disp + block_halfsize;
 	uint32_t y = block_halfsize;
 
 	// first pixel
@@ -274,7 +276,7 @@ void FillBlockCostImage(vx_image block_cost_image, vx_image pixel_cost_image, in
 	for (y++; y < height - block_halfsize; y++)
 	{
 		// first pixel in row
-		x = block_halfsize + offset;
+		x = block_halfsize + disp;
 		cost = GetPixel32U(block_cost_image, x, y - 1);
 
 		block.start_x = x - block_halfsize;
@@ -334,17 +336,17 @@ void FreeImageArray(vx_image images, int32_t size)
 }
 
 int16_t Disparity(
-	vx_coordinates2d_t *pixel, vx_image block_cost_images,
+	const vx_coordinates2d_t pixel, const vx_image block_cost_images,
 	const int16_t max_disparity, const uint32_t block_halfsize, const uint32_t uniqueness_threshold)
 {
 	uint32_t min_diff = UINT32_MAX;
-	int16_t best_disp = 0;
+	int16_t  best_disp = 0;
 
-	int16_t limit_disp = pixel->x >= block_halfsize + max_disparity ? max_disparity : (int16_t)(pixel->x - block_halfsize);
+	const int16_t limit_disp = pixel.x >= block_halfsize + max_disparity ? max_disparity : (int16_t)(pixel.x - block_halfsize);
 
 	for (int16_t disp = 0; disp <= limit_disp; disp++)
 	{
-		uint32_t diff = GetPixel32U(&block_cost_images[disp], pixel->x, pixel->y);
+		uint32_t diff = GetPixel32U(&block_cost_images[disp], pixel.x, pixel.y);
 		if (diff < min_diff)
 		{
 			min_diff = diff;
@@ -359,24 +361,24 @@ int16_t Disparity(
 		{
 			if (disp != best_disp && disp != best_disp - 1 && disp != best_disp + 1)
 			{
-				uint32_t diff = GetPixel32U(&block_cost_images[disp], pixel->x, pixel->y);
+				uint32_t diff = GetPixel32U(&block_cost_images[disp], pixel.x, pixel.y);
 				if (diff < disp_uniqueness_threshold)
-					return UNRELIABLE;
+					return DISP_UNRELIABLE;
 			}
 		}
 	}
 
 	if (0 < best_disp && best_disp < limit_disp)
 	{
-		uint32_t prev_diff = GetPixel32U(&block_cost_images[best_disp - 1], pixel->x, pixel->y);
-		uint32_t next_diff = GetPixel32U(&block_cost_images[best_disp + 1], pixel->x, pixel->y);
+		uint32_t prev_diff = GetPixel32U(&block_cost_images[best_disp - 1], pixel.x, pixel.y);
+		uint32_t next_diff = GetPixel32U(&block_cost_images[best_disp + 1], pixel.x, pixel.y);
 		return SubPixelEstimation(best_disp, prev_diff, min_diff, next_diff);
 	}
 
 	return best_disp;
 }
 
-int16_t SubPixelEstimation(int16_t disparity, int prev_cost, int current_cost, int next_cost)
+int16_t SubPixelEstimation(const int16_t disparity, const int prev_cost, const int current_cost, const int next_cost)
 {
 	float denum = (float)(prev_cost - 2 * current_cost + next_cost);
 	if (denum != 0)
@@ -407,7 +409,7 @@ void InterpolateBadPixels(vx_image image)
 	{
 		for (pixel.x = 0; pixel.x < image->width; pixel.x++)
 		{
-			if (GetPixel16S(image, pixel.x, pixel.y) == UNRELIABLE)
+			if (GetPixel16S(image, pixel.x, pixel.y) == DISP_UNRELIABLE)
 			{
 				int16_t new_value = Interpolate(image, &pixel);
 				SetPixel16S(image, pixel.x, pixel.y, new_value);
@@ -443,7 +445,7 @@ int16_t Interpolate(vx_image image, vx_coordinates2d_t *pixel)
 				continue;
 
 			int16_t current_pixel = GetPixel16S(image, x, y);
-			if (current_pixel == UNRELIABLE)
+			if (current_pixel == DISP_UNRELIABLE)
 				continue;
 
 			sum += kernel[i*kernel_size + j] * current_pixel;
@@ -458,5 +460,5 @@ int16_t Interpolate(vx_image image, vx_coordinates2d_t *pixel)
 		return interpolated;
 	}
 	else
-		return UNRELIABLE;
+		return DISP_UNRELIABLE;
 }

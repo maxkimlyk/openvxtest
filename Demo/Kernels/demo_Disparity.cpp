@@ -74,6 +74,7 @@ void demo_DisparityMap::execute()
 
 	const std::string leftImgPath = "..\\Image\\disparity\\01left.png";
 	const std::string rightImgPath = "..\\Image\\disparity\\01right.png";
+
 	m_leftImage = cv::imread(leftImgPath, CV_LOAD_IMAGE_GRAYSCALE);
 	m_rightImage = cv::imread(rightImgPath, CV_LOAD_IMAGE_GRAYSCALE);
 	m_sourceImage = cv::imread(leftImgPath, CV_LOAD_IMAGE_GRAYSCALE);
@@ -144,8 +145,12 @@ void demo_DisparityMap::applyParameters(int, void* pointer)
 	
 	free(disparityImageData);
 
+	///@}
+
 	int numDisparities = (pThis->m_numDisparities / 16) * 16;
 	int sadWindowSize = pThis->m_blockHalfsize * 2 + 1;
+
+	// TODO: fix termination on small block size (2)
 
 	cv::Ptr<cv::StereoBM> sbm = cv::StereoBM::create(numDisparities, sadWindowSize);
 	sbm->setUniquenessRatio(pThis->m_uniquenessThreshold);
@@ -163,8 +168,6 @@ void demo_DisparityMap::applyParameters(int, void* pointer)
 		cvDisparityMap16Bits.convertTo(disparityMap8Bits, CV_8UC1, 255 / (maxVal - minVal));
 		cv::imshow(CVDisparityMapWindowName, disparityMap8Bits);
 	}
-
-	///@}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
