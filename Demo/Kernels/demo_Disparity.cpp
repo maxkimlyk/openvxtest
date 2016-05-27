@@ -150,7 +150,8 @@ void demo_DisparityMap::applyParameters(int, void* pointer)
 	int numDisparities = (pThis->m_numDisparities / 16) * 16;
 	int sadWindowSize = pThis->m_blockHalfsize * 2 + 1;
 
-	// TODO: fix termination on small block size (2)
+	if (sadWindowSize < 5)
+		sadWindowSize = 5;
 
 	cv::Ptr<cv::StereoBM> sbm = cv::StereoBM::create(numDisparities, sadWindowSize);
 	sbm->setUniquenessRatio(pThis->m_uniquenessThreshold);
